@@ -22,6 +22,8 @@
 
 #include "pch.h"
 
+#include "visionalvr_trace.h"
+
 #include "log.h"
 #include "runtime.h"
 #include "trackers.h"
@@ -355,6 +357,10 @@ namespace virtualdesktop_openxr {
             XrPosef headPose;
             viewState->viewStateFlags =
                 locateSpace(*m_viewSpace, *(Space*)viewLocateInfo->space, viewLocateInfo->displayTime, headPose);
+            visionalvr::Trace(visionalvr::TraceLocateViews,
+                              m_frameWaited - 1,
+                              ovr_GetTimeInSeconds(),
+                              xrTimeToOvrTime(viewLocateInfo->displayTime));
 
             if (viewState->viewStateFlags & (XR_VIEW_STATE_POSITION_VALID_BIT | XR_VIEW_STATE_ORIENTATION_VALID_BIT)) {
                 // Calculate poses for each eye.

@@ -22,6 +22,8 @@
 
 #include "pch.h"
 
+#include "visionalvr_trace.h"
+
 #include "log.h"
 #include "runtime.h"
 #include "utils.h"
@@ -174,6 +176,7 @@ namespace virtualdesktop_openxr {
 
             const double now = ovr_GetTimeInSeconds();
             double predictedDisplayTime = ovr_GetPredictedDisplayTime(m_ovrSession, ovrFrameId);
+            visionalvr::Trace(visionalvr::TraceWaitFrameReturn, ovrFrameId, now, predictedDisplayTime);
             TraceLoggingWrite(g_traceProvider,
                               "WaitFrame",
                               TLArg(now, "Now"),
@@ -262,6 +265,7 @@ namespace virtualdesktop_openxr {
 
             // Tell OVR we are about to begin the frame.
             const long long ovrFrameId = m_frameWaited - 1;
+            visionalvr::Trace(visionalvr::TraceBeginFrame, ovrFrameId, ovr_GetTimeInSeconds(), frameDiscarded ? 1.0 : 0.0);
             if (!m_useAsyncSubmission) {
                 TraceLocalActivity(beginFrame);
                 TraceLoggingWriteStart(beginFrame, "OVR_BeginFrame", TLArg(ovrFrameId, "FrameId"));
@@ -420,6 +424,11 @@ namespace virtualdesktop_openxr {
             }
 
             m_precompositor.displayTime = frameEndInfo->displayTime;
+            visionalvr::Trace(visionalvr::TraceEndFrame,
+                              m_frameBegun - 1,
+                              ovr_GetTimeInSeconds(),
+                              xrTimeToOvrTime(frameEndInfo->displayTime),
+                              (double)frameEndInfo->layerCount);
             m_precompositor.isFirstProjectionLayer = true;
             m_precompositor.resolvedSwapchainImages.clear();
 
@@ -539,6 +548,8 @@ namespace virtualdesktop_openxr {
                 scaleDesc.HmdToEyePose[xr::StereoView::Left] = m_cachedEyeInfo[xr::StereoView::Left].HmdToEyePose;
                 scaleDesc.HmdToEyePose[xr::StereoView::Right] = m_cachedEyeInfo[xr::StereoView::Right].HmdToEyePose;
                 scaleDesc.HmdSpaceToWorldScaleInMeters = 1.f;
+                visionalvr::Trace(
+                    visionalvr::TraceEndFrameSubmit, ovrFrameId, ovr_GetTimeInSeconds(), 0.0, (double)layers.size());
                 CHECK_OVRCMD(
                     ovr_EndFrame(m_ovrSession, ovrFrameId, &scaleDesc, layers.data(), (unsigned int)layers.size()));
                 TraceLoggingWriteStop(endFrame, "OVR_EndFrame");
@@ -570,6 +581,11 @@ namespace virtualdesktop_openxr {
 
                 std::unique_lock lock(m_asyncSubmissionMutex);
                 m_layersForAsyncSubmission = layersAllocator;
+                visionalvr::Trace(visionalvr::TraceEndFrameSubmit,
+                                  ovrFrameId,
+                                  ovr_GetTimeInSeconds(),
+                                  1.0 /* async */,
+                                  (double)layersAllocator.size());
 
                 m_asyncSubmissionCondVar.notify_all();
 
@@ -1123,6 +1139,7 @@ namespace virtualdesktop_openxr {
                 }
             }
             m_lastWaitToBeginFrameTime = std::chrono::high_resolution_clock::now();
+            visionalvr::Trace(visionalvr::TraceAsyncWaitReturn, ovrFrameId, ovr_GetTimeInSeconds());
 
             {
                 TraceLocalActivity(beginFrame);
@@ -1164,6 +1181,8 @@ namespace virtualdesktop_openxr {
                 scaleDesc.HmdToEyePose[xr::StereoView::Left] = m_cachedEyeInfo[xr::StereoView::Left].HmdToEyePose;
                 scaleDesc.HmdToEyePose[xr::StereoView::Right] = m_cachedEyeInfo[xr::StereoView::Right].HmdToEyePose;
                 scaleDesc.HmdSpaceToWorldScaleInMeters = 1.f;
+                visionalvr::Trace(
+                    visionalvr::TraceAsyncEndFrame, ovrFrameId, ovr_GetTimeInSeconds(), 0.0, (double)layers.size());
                 CHECK_OVRCMD(
                     ovr_EndFrame(m_ovrSession, ovrFrameId, &scaleDesc, layers.data(), (unsigned int)layers.size()));
                 TraceLoggingWriteStop(endFrame, "OVR_EndFrame");
