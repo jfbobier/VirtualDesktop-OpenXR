@@ -581,15 +581,20 @@ namespace virtualdesktop_openxr {
             // - For texture arrays, we must do a copy to slice 0 into another swapchain.
             // - For MSAA, we must resolve into a non-MSAA swapchain.
             if (xrSwapchain.ovrDesc.SampleCount == 1) {
-                m_ovrSubmissionContext->CopySubresourceRegion(
-                    xrSwapchain.resolvedSlices[slice].images[ovrDestIndex].Get(),
-                    0,
-                    0,
-                    0,
-                    0,
-                    xrSwapchain.appSwapchain.images[lastReleasedIndex].Get(),
-                    slice,
-                    nullptr);
+                if (xrSwapchain.ovrDesc.Type == ovrTexture_Cube) { /* OVRShim: copy every face and mip */
+                    for (UINT face = 0; face < 6; face++) {
+                        for (UINT mip = 0; mip < (UINT)xrSwapchain.ovrDesc.MipLevels; mip++) {
+                            const UINT sub = mip + face * (UINT)xrSwapchain.ovrDesc.MipLevels;
+                            m_ovrSubmissionContext->CopySubresourceRegion(
+                                xrSwapchain.resolvedSlices[slice].images[ovrDestIndex].Get(), sub, 0, 0, 0,
+                                xrSwapchain.appSwapchain.images[lastReleasedIndex].Get(), sub, nullptr);
+                        }
+                    }
+                } else {
+                    m_ovrSubmissionContext->CopySubresourceRegion(
+                        xrSwapchain.resolvedSlices[slice].images[ovrDestIndex].Get(), 0, 0, 0, 0,
+                        xrSwapchain.appSwapchain.images[lastReleasedIndex].Get(), slice, nullptr);
+                }
             } else {
                 // Resolve MSAA. For depth buffers, this requires a shader.
                 if (!isDepthBuffer) {
