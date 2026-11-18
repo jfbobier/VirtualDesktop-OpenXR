@@ -7,6 +7,8 @@
 #include <windows.h>
 
 #include <atomic>
+#include <cstdint>
+#include <cstdlib>
 
 namespace airframexr {
     enum TraceKind : int {
@@ -34,5 +36,26 @@ namespace airframexr {
         if (f) {
             f(kind, frameId, now, a, b);
         }
+    }
+
+    // Texture-array slices above 0 read in place by OVRShim instead of copied into a second OVR swapchain
+    // (ovrLayerFlag_AirFrameXR_ArraySlices). An experiment: only with the lab switch AIRFRAMEXR_VDXR_ARRAY_SLICES=1 in the app's
+    // environment, and only when the runtime DLL reports the capability (ovrshim_Capabilities bit 0). Decided at the first call
+    // (xrEndFrame: the runtime DLL is loaded by then).
+    inline bool ArraySlicesInPlace() {
+        static const bool on = [] {
+            char* v = nullptr;
+            size_t n = 0;
+            const bool wanted = _dupenv_s(&v, &n, "AIRFRAMEXR_VDXR_ARRAY_SLICES") == 0 && v && atoi(v) != 0;
+            free(v);
+            if (!wanted) {
+                return false;
+            }
+            typedef uint32_t(__cdecl * CapsFn)();
+            const HMODULE m = GetModuleHandleW(L"LibOVRRT64_1.dll");
+            const CapsFn caps = m ? (CapsFn)GetProcAddress(m, "ovrshim_Capabilities") : nullptr;
+            return caps && (caps() & 1u) != 0;
+        }();
+        return on;
     }
 } // namespace airframexr

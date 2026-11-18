@@ -682,23 +682,39 @@ namespace virtualdesktop_openxr {
             const bool canSharpen = m_sharpenFactor > 0.f;
             const bool needUpscaling = m_precompositor.isFirstProjectionLayer && (canUpscale || canSharpen);
 
+            // AirFrameXR: a texture-array slice above 0 is read in place by OVRShim instead of copied into a second swapchain (lab
+            // switch, airframexr::ArraySlicesInPlace). Only for the bottom layer on the direct path: the upscaler reads resolved
+            // slices, and layers above 0 may need VDXR's alpha pre-processing, which works on a resolved slice.
+            const uint32_t arraySlice = proj.views[viewIndex].subImage.imageArrayIndex;
+            const bool sliceInPlace = arraySlice > 0 && arraySlice < 16 && !needUpscaling && m_precompositor.layerIndex == 0 &&
+                                      xrSwapchain.appSwapchain.ovrSwapchain && airframexr::ArraySlicesInPlace();
+
             // Fill out color buffer information.
-            resolveSwapchainImage(xrSwapchain,
-                                  proj.views[viewIndex].subImage.imageArrayIndex,
-                                  m_precompositor.resolvedSwapchainImages,
-                                  needUpscaling /* Skip committing if we will not use the swapchain directly */);
-            layer.EyeFov.ColorTexture[viewIndex] =
-                xrSwapchain.resolvedSlices[proj.views[viewIndex].subImage.imageArrayIndex].ovrSwapchain;
+            if (sliceInPlace) {
+                resolveSwapchainImage(xrSwapchain, 0, m_precompositor.resolvedSwapchainImages, false);
+                layer.EyeFov.ColorTexture[viewIndex] = xrSwapchain.resolvedSlices[0].ovrSwapchain;
+                layer.Header.Flags = (int)((unsigned)layer.Header.Flags | (unsigned)ovrLayerFlag_AirFrameXR_ArraySlices |
+                                           (arraySlice << (24 + 4 * viewIndex)));
+            } else {
+                resolveSwapchainImage(xrSwapchain,
+                                      arraySlice,
+                                      m_precompositor.resolvedSwapchainImages,
+                                      needUpscaling /* Skip committing if we will not use the swapchain directly */);
+                layer.EyeFov.ColorTexture[viewIndex] = xrSwapchain.resolvedSlices[arraySlice].ovrSwapchain;
+            }
 
             if (!isValidSwapchainRect(xrSwapchain.ovrDesc, proj.views[viewIndex].subImage.imageRect)) {
                 return XR_ERROR_SWAPCHAIN_RECT_INVALID;
             }
 
-            preprocessSwapchainImage(xrSwapchain,
-                                     m_precompositor.layerIndex,
-                                     proj.views[viewIndex].subImage.imageArrayIndex,
-                                     proj.layerFlags,
-                                     proj.views[viewIndex].subImage.imageRect);
+            // (in place: layer 0 needs no pre-processing, and the slice has no resolved swapchain to work on)
+            if (!sliceInPlace) {
+                preprocessSwapchainImage(xrSwapchain,
+                                         m_precompositor.layerIndex,
+                                         arraySlice,
+                                         proj.layerFlags,
+                                         proj.views[viewIndex].subImage.imageRect);
+            }
 
             layer.EyeFov.Viewport[viewIndex].Pos.x = proj.views[viewIndex].subImage.imageRect.offset.x;
             layer.EyeFov.Viewport[viewIndex].Pos.y = proj.views[viewIndex].subImage.imageRect.offset.y;

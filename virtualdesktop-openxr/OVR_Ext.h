@@ -29,6 +29,9 @@ static constexpr int ovrHmd_Quest3 = 23;
 // Custom flags for VDXR.
 static constexpr int ovrLayerFlag_DisableLeft = 0x100000;
 static constexpr int ovrLayerFlag_DisableRight = 0x200000;
+// AirFrameXR (OVRShim only, when its ovrshim_Capabilities reports bit 0): the layer's swapchain is a texture array read in place;
+// eye e reads slice (Flags >> (24 + 4 e)) & 0xF (airframexr_trace.h, ArraySlicesInPlace).
+static constexpr int ovrLayerFlag_AirFrameXR_ArraySlices = 0x400000;
 
 // Some values we add for 3rd party standalone runtimes based on VDXR.
 static constexpr int ovrControllerType_Index = 0x1000;
