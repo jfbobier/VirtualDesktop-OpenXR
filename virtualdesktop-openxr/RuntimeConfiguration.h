@@ -1,6 +1,6 @@
 #pragma once
 
-#define RUNTIME_PRETTY_NAME "VirtualDesktopXR (Standalone)"
+#define RUNTIME_PRETTY_NAME "AirFrameXR (VDXR)" /* OVRShim: display name */
 #define BACKEND_PRETTY_NAME "Oculus"
 #define REG_PREFIX "VirtualDesktop-OpenXR"
 #define LOG_FOLDER L"VirtualDesktop-OpenXR"
