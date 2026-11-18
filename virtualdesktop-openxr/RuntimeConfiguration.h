@@ -7,6 +7,7 @@
 
 #define HAS_INVISIBLE_MODE
 #define HAS_CYLINDER_LAYERS
+#define HAS_CUBE_LAYERS // AirFrameXR: advertise XR_KHR_composition_layer_cube (OVRShim composes cube layers)
 #define HAS_HAND_JOINTS_TRACKING
 #define HAS_HAND_TRACKING_AIM
 #define HAS_EYE_TRACKING
