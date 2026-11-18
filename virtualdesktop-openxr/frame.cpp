@@ -22,6 +22,8 @@
 
 #include "pch.h"
 
+#include "airframexr_trace.h"
+
 #include "log.h"
 #include "runtime.h"
 #include "utils.h"
@@ -174,6 +176,7 @@ namespace virtualdesktop_openxr {
 
             const double now = ovr_GetTimeInSeconds();
             double predictedDisplayTime = ovr_GetPredictedDisplayTime(m_ovrSession, ovrFrameId);
+            airframexr::Trace(airframexr::TraceWaitFrameReturn, ovrFrameId, now, predictedDisplayTime);
             TraceLoggingWrite(g_traceProvider,
                               "WaitFrame",
                               TLArg(now, "Now"),
@@ -262,6 +265,7 @@ namespace virtualdesktop_openxr {
 
             // Tell OVR we are about to begin the frame.
             const long long ovrFrameId = m_frameWaited - 1;
+            airframexr::Trace(airframexr::TraceBeginFrame, ovrFrameId, ovr_GetTimeInSeconds(), frameDiscarded ? 1.0 : 0.0);
             if (!m_useAsyncSubmission) {
                 TraceLocalActivity(beginFrame);
                 TraceLoggingWriteStart(beginFrame, "OVR_BeginFrame", TLArg(ovrFrameId, "FrameId"));
@@ -422,6 +426,12 @@ namespace virtualdesktop_openxr {
             m_precompositor.displayTime = frameEndInfo->displayTime;
             m_precompositor.isFirstProjectionLayer = true;
             m_precompositor.resolvedSwapchainImages.clear();
+            m_afxFrameContent = {};
+            airframexr::Trace(airframexr::TraceEndFrame,
+                              m_frameBegun - 1,
+                              ovr_GetTimeInSeconds(),
+                              xrTimeToOvrTime(frameEndInfo->displayTime),
+                              (double)frameEndInfo->layerCount);
 
             // Construct the list of layers.
             std::vector<ovrLayer_Union> layersAllocator;
@@ -491,6 +501,16 @@ namespace virtualdesktop_openxr {
             for (auto resolvedSwapchain : m_precompositor.resolvedSwapchainImages) {
                 resolvedSwapchain.first->dirty = false;
             }
+            airframexr::Trace(airframexr::TraceFrameContent,
+                              m_frameBegun - 1,
+                              ovr_GetTimeInSeconds(),
+                              (double)m_afxFrameContent.released,
+                              (double)m_afxFrameContent.slices);
+            airframexr::Trace(airframexr::TraceFrameCopies,
+                              m_frameBegun - 1,
+                              ovr_GetTimeInSeconds(),
+                              (double)m_afxFrameContent.copied,
+                              (double)m_afxFrameContent.unchanged);
 
             // Add a dummy layer so we can still call ovr_endFrame() for timing purposes.
             if (layersAllocator.empty()) {

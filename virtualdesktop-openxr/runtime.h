@@ -763,6 +763,13 @@ namespace virtualdesktop_openxr {
         bool m_jiggleViewRotations{false};
         MyHandSimulation m_handSimulation[xr::Side::Count];
         PrecompositorState m_precompositor;
+        // AirFrameXR: what this frame's layers carried (resolveSwapchainImage), reported to OVRShim (airframexr_trace.h).
+        struct FrameContent {
+            uint32_t slices{0};    // swapchain slices resolved
+            uint32_t released{0};  // ... whose swapchain had an image released since the previous frame
+            uint32_t copied{0};    // ... copied or resolved into a second OVR swapchain
+            uint32_t unchanged{0}; // ... on that copy path but not copied: nothing released
+        } m_afxFrameContent;
         uint32_t m_shouldRecenter{false};
         XrTime m_recenterTime{0};
         float m_supersamplingFactor{1.f};

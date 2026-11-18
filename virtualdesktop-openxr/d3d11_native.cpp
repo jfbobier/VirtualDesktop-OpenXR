@@ -528,6 +528,10 @@ namespace virtualdesktop_openxr {
 
         const bool needCopy = (slice > 0 || !xrSwapchain.appSwapchain.ovrSwapchain);
 
+        // AirFrameXR: per-frame facts for OVRShim (airframexr_trace.h)
+        m_afxFrameContent.slices++;
+        m_afxFrameContent.released += xrSwapchain.dirty ? 1 : 0;
+
         const int lastReleasedIndex = xrSwapchain.lastReleasedIndex;
 
         TraceLoggingWrite(g_traceProvider,
@@ -543,6 +547,7 @@ namespace virtualdesktop_openxr {
         // (The precompositor's own swapchain, used only with the upscaling/sharpen settings, still commits every frame.)
         if (needCopy && !xrSwapchain.dirty && xrSwapchain.resolvedSlices[slice].lastCommittedIndex >= 0) {
             TraceLoggingWrite(g_traceProvider, "ResolveSwapchainImage_Unchanged", TLArg(slice, "Slice"));
+            m_afxFrameContent.unchanged++;
             resolved.insert(tuple);
             return;
         }
@@ -578,6 +583,7 @@ namespace virtualdesktop_openxr {
         }
 
         if (needCopy) {
+            m_afxFrameContent.copied++;
             const bool isDepthBuffer =
                 (xrSwapchain.xrDesc.usageFlags & XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
             TraceLoggingWrite(g_traceProvider,
