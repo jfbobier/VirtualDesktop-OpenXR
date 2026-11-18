@@ -856,7 +856,7 @@ namespace virtualdesktop_openxr {
         }
 
         if (quad.eyeVisibility != XR_EYE_VISIBILITY_BOTH) {
-            if (!m_useOculusRuntime) {
+            if (true /* OVRShim: eyeVisibility honored (quad) */) {
                 if (quad.eyeVisibility == XR_EYE_VISIBILITY_LEFT) {
                     layer.Header.Flags |= ovrLayerFlag_DisableRight;
                 } else if (quad.eyeVisibility == XR_EYE_VISIBILITY_RIGHT) {
@@ -947,7 +947,7 @@ namespace virtualdesktop_openxr {
         }
 
         if (cube.eyeVisibility != XR_EYE_VISIBILITY_BOTH) {
-            if (!m_useOculusRuntime) {
+            if (true /* OVRShim: eyeVisibility honored (cube) */) {
                 if (cube.eyeVisibility == XR_EYE_VISIBILITY_LEFT) {
                     layer.Header.Flags |= ovrLayerFlag_DisableRight;
                 } else if (cube.eyeVisibility == XR_EYE_VISIBILITY_RIGHT) {
