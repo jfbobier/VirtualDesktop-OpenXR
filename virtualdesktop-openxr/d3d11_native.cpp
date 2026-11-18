@@ -537,6 +537,16 @@ namespace virtualdesktop_openxr {
                           TLArg(needCopy, "NeedCopy"),
                           TLArg(skipCommit, "SkipCommit"));
 
+        // AirFrameXR: nothing released since this slice was last copied (the app resubmits its last picture). The copy
+        // made then still holds that picture and nothing writes to a committed image, so neither copy nor commit again:
+        // as on the direct path, a commit now always means a newly released picture, and a repeat costs no GPU copy.
+        // (The precompositor's own swapchain, used only with the upscaling/sharpen settings, still commits every frame.)
+        if (needCopy && !xrSwapchain.dirty && xrSwapchain.resolvedSlices[slice].lastCommittedIndex >= 0) {
+            TraceLoggingWrite(g_traceProvider, "ResolveSwapchainImage_Unchanged", TLArg(slice, "Slice"));
+            resolved.insert(tuple);
+            return;
+        }
+
         int ovrDestIndex = -1;
         while (true) {
             CHECK_OVRCMD(ovr_GetTextureSwapChainCurrentIndex(
