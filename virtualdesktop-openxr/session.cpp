@@ -521,7 +521,7 @@ namespace virtualdesktop_openxr {
 
         m_useMirrorWindow = getSetting("mirror_window").value_or(false);
 
-        m_useRunningStart = !getSetting("quirk_disable_running_start").value_or(false);
+        m_useRunningStart = getSetting("ovrshim_vdxr_running_start").value_or(false) && !getSetting("quirk_disable_running_start").value_or(false); /* OVRShim: frame-start gate */
         m_useDeferredFrameWait = getSetting("defer_frame_wait").value_or(false);
 
         const bool shouldUseDepth =
